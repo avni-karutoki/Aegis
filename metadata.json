@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix SentinelMesh",
+  "description": "Collaborative cybersecurity network powered by independent AI agents. Trust is not given. It\u0027s verified.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

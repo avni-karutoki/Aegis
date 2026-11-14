@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Outfit", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #050a07;
+    color: #f4f7f4;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.studio-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(163, 230, 53, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(163, 230, 53, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+.emerald-radial-stage {
+  background:
+    radial-gradient(circle at 50% 45%, rgba(16, 185, 129, 0.16) 0%, rgba(11, 32, 21, 0.72) 38%, rgba(5, 10, 7, 0.98) 78%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
