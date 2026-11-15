@@ -10,6 +10,7 @@ import {
   Network,
   Play,
   RotateCcw,
+  Scale,
   Search,
   ShieldAlert,
   ShieldCheck,
@@ -32,9 +33,11 @@ import { TRUST_DISTRIBUTION } from '../../data/mockData';
 import { ThreatEvent, VerificationStatus } from '../../types/sentinel';
 import { PruneConsole } from './PruneConsole';
 import { MaritimePanel } from './MaritimePanel';
+import { ConsensusEngine } from './ConsensusEngine';
 
 type DashboardTab =
   | 'overview'
+  | 'consensus'
   | 'agents'
   | 'threats'
   | 'trust'
@@ -47,6 +50,7 @@ interface DashboardViewProps {
 
 const NAV_ITEMS: { id: DashboardTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'consensus', label: 'Consensus Engine', icon: Scale },
   { id: 'agents', label: 'Agent Network', icon: Network },
   { id: 'threats', label: 'Threat Intelligence', icon: ShieldAlert },
   { id: 'trust', label: 'Trust & Verification', icon: ShieldCheck },
@@ -343,6 +347,37 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* TAB 1: OVERVIEW */}
               {activeTab === 'overview' && (
             <>
+              {/* Consensus Engine CTA (when backend is live) */}
+              {backendOnline && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                  className="rounded-xl border border-[#B8FF2E]/30 bg-[#B8FF2E]/[0.05] p-4 flex items-center justify-between gap-4 flex-wrap"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-[#B8FF2E] animate-pulse" />
+                    <div>
+                      <div className="font-display text-sm font-bold text-[#F4F7F4]">
+                        Consensus Engine ready
+                      </div>
+                      <div className="text-xs text-[#9FB2A5]">
+                        Run a live quorum verification against the real mesh — signed
+                        evidence, Prune-governed peer verdicts, trust recalibration.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('consensus')}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold tracking-[0.1em] uppercase bg-[#B8FF2E] text-[#050A07] rounded-md hover:bg-[#ccff5c] transition-colors cursor-pointer shrink-0"
+                  >
+                    <Play className="w-3.5 h-3.5" aria-hidden="true" />
+                    Open Consensus Engine
+                  </button>
+                </motion.div>
+              )}
+
               {/* 4-Column KPI Strip */}
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
@@ -470,6 +505,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </>
           )}
+
+          {/* TAB: CONSENSUS ENGINE (USP) */}
+          {activeTab === 'consensus' && <ConsensusEngine />}
 
           {/* TAB 2: AGENT NETWORK */}
           {activeTab === 'agents' && (

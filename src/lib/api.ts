@@ -104,6 +104,61 @@ export interface MaritimeJoinResult {
   privateKeyPem: string;
 }
 
+export interface ConsensusInit {
+  sessionId: string;
+  eventId: string;
+  title: string;
+  scenario: 'threat' | 'unreliable' | 'custom';
+  origin: string;
+  peers: string[];
+  severity: string;
+  baseConfidence: number;
+  digest: string;
+  signature: string;
+  signatureAlgorithm: 'ed25519';
+  createdAt: string;
+}
+
+export interface ConsensusBroadcast {
+  sessionId: string;
+  eventId: string;
+  relay: string;
+  peers: Array<{ agentId: string; host: string; relayLatencyMs: number }>;
+  digestEchoed: string;
+  signatureVerifiedOnRelay: boolean;
+}
+
+export interface ConsensusPeerVerdict {
+  agentId: string;
+  decision: 'allowed' | 'blocked';
+  mode: string;
+  corroborated: boolean | null;
+  confidence: number | null;
+  rationale: string | null;
+  redactions: number;
+  tokensIn: number;
+  tokensOut: number;
+  costUsd: number;
+  latencyMs: number;
+  trace: PruneTraceStage[];
+}
+
+export interface ConsensusVerify {
+  sessionId: string;
+  evaluations: ConsensusPeerVerdict[];
+}
+
+export interface ConsensusResult {
+  sessionId: string;
+  eventId: string;
+  quorum: { corroborations: number; required: number; met: boolean };
+  confidence: number;
+  verificationStatus: 'Verified' | 'Flagged Unreliable';
+  recommendation: string;
+  trustDeltas: Array<{ agentId: string; delta: number; newTrust?: number }>;
+  gatewayStats: PruneStats;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}/api${path}`, {
     headers: { 'content-type': 'application/json' },
@@ -145,5 +200,29 @@ export const api = {
     request<MaritimeJoinResult>('/maritime/demo-register', {
       method: 'POST',
       body: JSON.stringify(body ?? {}),
+    }),
+
+  consensusInit: (body: {
+    scenario: 'threat' | 'unreliable' | 'custom';
+    customPayload?: string;
+  }) =>
+    request<ConsensusInit>('/consensus/init', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  consensusBroadcast: (sessionId: string) =>
+    request<ConsensusBroadcast>(`/consensus/${sessionId}/broadcast`, {
+      method: 'POST',
+    }),
+
+  consensusVerify: (sessionId: string) =>
+    request<ConsensusVerify>(`/consensus/${sessionId}/verify`, {
+      method: 'POST',
+    }),
+
+  consensusResult: (sessionId: string) =>
+    request<ConsensusResult>(`/consensus/${sessionId}/consensus`, {
+      method: 'POST',
     }),
 };
