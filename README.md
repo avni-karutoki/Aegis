@@ -1,4 +1,4 @@
-# Aegis — SentinelMesh
+# Aegis
 
 **Collaborative cybersecurity network powered by independent AI agents.**
 *Trust is not given. It's verified.*
