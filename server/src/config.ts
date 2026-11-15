@@ -14,6 +14,11 @@ export const config = {
     url: process.env.MARITIME_API_URL ?? '',
     apiKey: process.env.MARITIME_API_KEY ?? '',
   },
+  /** Optional CORS lock (comma-separated origins). Empty = allow all. */
+  corsOrigin: (process.env.CORS_ORIGIN ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   prune: {
     /** Max raw payload characters accepted at the door. */
     maxPayloadChars: 20_000,

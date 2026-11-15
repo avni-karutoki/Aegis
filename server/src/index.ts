@@ -5,7 +5,7 @@ import { api } from './routes.js';
 
 const app = express();
 
-app.use(cors());
+app.use(cors(config.corsOrigin.length > 0 ? { origin: config.corsOrigin } : {}));
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/', (_req, res) => {

@@ -1,0 +1,22 @@
+# Render Blueprint — deploys the Aegis backend as a web service.
+# Deploy: Render Dashboard → New → Blueprint → select this repo.
+services:
+  - type: web
+    name: aegis-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    plan: free
+    envVars:
+      # Set this in the Render dashboard after the first deploy (sync: false
+      # means Render prompts you for the value and stores it as a secret).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      # Optional: lock CORS to your Vercel domain once known (comma-separated).
+      # e.g. "https://aegis-sentinelmesh.vercel.app"
+      - key: CORS_ORIGIN
+        sync: false

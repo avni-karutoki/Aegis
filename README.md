@@ -281,10 +281,46 @@ dashboard's AI Usage tab renders live (5s polling).
 ```
 
 ## 6 · Troubleshooting
-
 - **Navbar says "Simulation Mode"** → backend isn't running: `npm run server`.
 - **Gemini shows `deterministic-guard`** → set `GEMINI_API_KEY` in `server/.env`
   and restart.
 - **Port 8787 busy** → change `PORT` in `server/.env` and `VITE_API_URL` in root
   `.env`.
 - **`npm.ps1` blocked on Windows** → use `npm.cmd` or set an execution policy.
+
+## 7 · Deployment (Vercel + Render)
+
+Deploy the **backend on Render** and the **frontend on Vercel**. Config for
+both is already in the repo (`render.yaml`, `vercel.json`).
+
+### Step 1 — Backend on Render (deploy this FIRST)
+1. Push this repo to GitHub (already done).
+2. Render Dashboard → **New → Blueprint** → select `avni-karutoki/Aegis-VihaanX`
+   — Render reads `render.yaml` and creates the `aegis-api` web service.
+3. When prompted, set the secret env vars:
+   - `GEMINI_API_KEY` (from Google AI Studio) — without it the gateway runs in
+     deterministic-guard mode (still fully functional).
+   - `CORS_ORIGIN` — you can leave it empty now and lock it to your Vercel
+     domain after Step 2.
+4. Deploy → copy the service URL, e.g. `https://aegis-api.onrender.com`
+   (health check: `/api/health`).
+
+### Step 2 — Frontend on Vercel
+1. Vercel → **Add New → Project** → import the same repo.
+2. Framework preset: **Vite** (auto-detected via `vercel.json`).
+3. **Before deploying**, add the environment variable:
+   - `VITE_API_URL` = `https://aegis-api.onrender.com` (your Render URL)
+   This is **required** — without it the built site would try to call
+   `localhost:8787`.
+4. Deploy → you get `https://<project>.vercel.app`.
+5. Recommended: back in Render, set `CORS_ORIGIN` to that exact Vercel URL
+   and redeploy the API — CORS is now locked to your frontend only.
+
+### Production notes
+- **Free-tier cold starts:** Render free services sleep after ~15 min idle
+  (~30–50 s wake-up). Open the site a couple of minutes before demoing.
+  The frontend's Simulation Mode fallback covers any sleepy window.
+- **Secrets:** the Gemini key only ever lives in Render's env store — the
+  browser never sees it (that's the point of the Prune gateway architecture).
+- **Local dev is unaffected:** with no env vars set, everything defaults to
+  `localhost:3000` + `localhost:8787` exactly as before.
