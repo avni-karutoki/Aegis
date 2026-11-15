@@ -27,8 +27,11 @@ import {
   YAxis,
 } from 'recharts';
 import { useSimulation } from '../../context/SimulationContext';
+import { useBackend } from '../../context/BackendContext';
 import { TRUST_DISTRIBUTION } from '../../data/mockData';
 import { ThreatEvent, VerificationStatus } from '../../types/sentinel';
+import { PruneConsole } from './PruneConsole';
+import { MaritimePanel } from './MaritimePanel';
 
 type DashboardTab =
   | 'overview'
@@ -78,6 +81,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | VerificationStatus>('All');
   const [selectedEvent, setSelectedEvent] = useState<ThreatEvent | null>(events[0] ?? null);
+  const { online: backendOnline, stats: backendStats, layers: backendLayers } = useBackend();
 
   const filteredEvents = useMemo(() => {
     return events.filter((ev) => {
@@ -831,51 +835,116 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* TAB 6: AI USAGE (PRUNE GATEWAY SIMULATION) */}
           {activeTab === 'ai-usage' && (
             <div className="space-y-6">
-              <div>
-                <h1 className="font-display text-2xl font-bold text-[#F4F7F4]">
-                  AI Usage &amp; Prune Gateway
-                </h1>
-                <p className="text-sm text-[#9FB2A5] mt-1">
-                  Simulated model-call governance statistics (illustrative frontend figures only).
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
-                  <div className="text-xs text-[#9FB2A5]">Total Request Count</div>
-                  <div className="font-mono-tabular text-3xl font-bold text-[#F4F7F4] mt-2">
-                    {totalAiRequests.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-[#34D399] mt-2">
-                    Routed through Prune Gateway
-                  </div>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h1 className="font-display text-2xl font-bold text-[#F4F7F4]">
+                    AI Usage &amp; Prune Gateway
+                  </h1>
+                  <p className="text-sm text-[#9FB2A5] mt-1">
+                    {backendOnline
+                      ? 'LIVE — figures below are real gateway telemetry from the backend.'
+                      : 'Simulation mode — backend offline, figures are illustrative frontend data.'}
+                  </p>
                 </div>
-
-                <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
-                  <div className="text-xs text-[#9FB2A5]">Blocked Requests</div>
-                  <div className="font-mono-tabular text-3xl font-bold text-[#F59E0B] mt-2">
-                    {blockedAiRequests}
-                  </div>
-                  <div className="text-xs text-[#9FB2A5] mt-2">
-                    Policy &amp; PII redaction triggers
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
-                  <div className="text-xs text-[#9FB2A5]">Illustrative Usage Cost</div>
-                  <div className="font-mono-tabular text-3xl font-bold text-[#B8FF2E] mt-2">
-                    ${illustrativeCostUsd.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-[#9FB2A5] mt-2">
-                    Simulated token optimization
-                  </div>
+                <div
+                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-[11px] font-mono-tabular uppercase tracking-[0.1em] ${
+                    backendOnline
+                      ? 'border-[#34D399]/40 bg-[#34D399]/10 text-[#34D399]'
+                      : 'border-white/15 bg-white/5 text-[#9FB2A5]'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      backendOnline ? 'bg-[#34D399] animate-pulse' : 'bg-[#9FB2A5]'
+                    }`}
+                  />
+                  {backendOnline
+                    ? `Backend live · Gemini ${backendLayers?.gemini ?? 'unknown'}`
+                    : 'Simulation mode'}
                 </div>
               </div>
+
+              {backendOnline && backendStats ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Total Gateway Calls</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#F4F7F4] mt-2">
+                      {backendStats.totalRequests.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[#34D399] mt-2">
+                      {backendStats.allowedRequests} allowed ·{' '}
+                      {backendStats.blockedRequests} blocked
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Redactions Applied</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#F59E0B] mt-2">
+                      {backendStats.redactionsTotal}
+                    </div>
+                    <div className="text-xs text-[#9FB2A5] mt-2">
+                      PII &amp; secrets stripped before the model
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Gateway Spend</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#B8FF2E] mt-2">
+                      ${backendStats.estimatedCostUsd.toFixed(4)}
+                    </div>
+                    <div className="text-xs text-[#9FB2A5] mt-2">
+                      ${backendStats.spendRemainingUsd.toFixed(2)} left of $
+                      {backendStats.spendCeilingUsd.toFixed(0)} ceiling ·{' '}
+                      {backendStats.tokensTotal.toLocaleString()} tokens
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Total Request Count</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#F4F7F4] mt-2">
+                      {totalAiRequests.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-[#34D399] mt-2">
+                      Routed through Prune Gateway (simulated)
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Blocked Requests</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#F59E0B] mt-2">
+                      {blockedAiRequests}
+                    </div>
+                    <div className="text-xs text-[#9FB2A5] mt-2">
+                      Policy &amp; PII redaction triggers (simulated)
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-white/10 bg-[#08120C] p-5">
+                    <div className="text-xs text-[#9FB2A5]">Illustrative Usage Cost</div>
+                    <div className="font-mono-tabular text-3xl font-bold text-[#B8FF2E] mt-2">
+                      ${illustrativeCostUsd.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-[#9FB2A5] mt-2">
+                      Simulated token optimization
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <PruneConsole />
+
+              <MaritimePanel />
 
               <div className="rounded-xl border border-white/10 bg-[#08120C] p-6 space-y-4">
                 <h2 className="font-display text-lg font-bold text-[#F4F7F4]">
                   Simulated Request &amp; Block Volume
                 </h2>
+                <p className="text-xs text-[#9FB2A5] -mt-2">
+                  Historical synthetic traffic shape for context — live governance
+                  figures above come from the Prune gateway.
+                </p>
                 <div className="h-[280px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={aiUsage}>

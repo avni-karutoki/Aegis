@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { useBackend } from '../context/BackendContext';
 
 interface NavbarProps {
   activeView: 'landing' | 'dashboard';
@@ -13,6 +14,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onBackToLanding,
 }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { online } = useBackend();
 
   const handleNavClick = (sectionId: string) => {
     setMobileOpen(false);
@@ -79,6 +81,21 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Zone 3: 1 Primary Action */}
         <div className="flex items-center gap-3 shrink-0">
+          <div
+            className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/10 bg-white/5 text-[10px] font-mono-tabular uppercase tracking-[0.12em] text-[#9FB2A5]"
+            title={
+              online
+                ? 'Backend online — MARITIME runtime + PRUNE gateway live'
+                : 'Backend offline — dashboard is running on simulated data. Start it with: npm run server'
+            }
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                online ? 'bg-[#34D399] animate-pulse' : 'bg-[#9FB2A5]'
+              }`}
+            />
+            {online ? 'Backend Live' : 'Simulation Mode'}
+          </div>
           <button
             type="button"
             onClick={() => {

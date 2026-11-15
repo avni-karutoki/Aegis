@@ -1,8 +1,10 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useBackend } from '../../context/BackendContext';
 
 export const TechnologySection: React.FC = () => {
+  const { online } = useBackend();
   return (
     <section
       id="about"
@@ -28,7 +30,9 @@ export const TechnologySection: React.FC = () => {
             rate-bounded, and deterministic.
           </p>
           <p className="font-mono-tabular text-xs text-[#6E8275]">
-            Conceptual frontend architecture diagram — no live external integration active.
+            {online
+              ? 'LIVE — backend online: MARITIME runtime and PRUNE gateway are active below.'
+              : 'Conceptual frontend architecture diagram — no live external integration active.'}
           </p>
         </motion.div>
 
@@ -44,8 +48,14 @@ export const TechnologySection: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-11 gap-6 items-center">
               {/* MARITIME */}
               <div className="md:col-span-5 rounded-xl border border-[#10B981]/30 bg-[#0A1A12] p-6 space-y-3">
-                <div className="font-mono-tabular text-xs tracking-[0.18em] text-[#34D399]">
+                <div className="font-mono-tabular text-xs tracking-[0.18em] text-[#34D399] flex items-center gap-2">
                   LAYER 01 · AGENT RUNTIME
+                  {online && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-[#34D399]/40 bg-[#34D399]/10 text-[9px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#34D399] animate-pulse" />
+                      LIVE
+                    </span>
+                  )}
                 </div>
                 <h3 className="font-display text-2xl font-extrabold text-[#F4F7F4]">
                   MARITIME
@@ -69,8 +79,14 @@ export const TechnologySection: React.FC = () => {
 
               {/* PRUNE */}
               <div className="md:col-span-5 rounded-xl border border-[#B8FF2E]/35 bg-[#0C1D13] p-6 space-y-3">
-                <div className="font-mono-tabular text-xs tracking-[0.18em] text-[#B8FF2E]">
+                <div className="font-mono-tabular text-xs tracking-[0.18em] text-[#B8FF2E] flex items-center gap-2">
                   LAYER 02 · MODEL GATEWAY
+                  {online && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded border border-[#B8FF2E]/40 bg-[#B8FF2E]/10 text-[9px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#B8FF2E] animate-pulse" />
+                      LIVE
+                    </span>
+                  )}
                 </div>
                 <h3 className="font-display text-2xl font-extrabold text-[#F4F7F4]">
                   PRUNE

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { SimulationProvider } from './context/SimulationContext';
+import { BackendProvider } from './context/BackendContext';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/landing/HeroSection';
 import { ProblemSection } from './components/landing/ProblemSection';
@@ -31,7 +32,8 @@ export function App() {
 
   return (
     <MotionConfig reducedMotion="user">
-      <SimulationProvider>
+      <BackendProvider>
+        <SimulationProvider>
         <AnimatePresence mode="wait">
           {activeView === 'dashboard' ? (
             <motion.div
@@ -73,7 +75,8 @@ export function App() {
             </motion.div>
           )}
         </AnimatePresence>
-      </SimulationProvider>
+        </SimulationProvider>
+      </BackendProvider>
     </MotionConfig>
   );
 }
