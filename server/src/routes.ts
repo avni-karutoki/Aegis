@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { createPrivateKey, sign as cryptoSign } from 'node:crypto';
+import { createHash, createPrivateKey, sign as cryptoSign } from 'node:crypto';
 import { maritime } from './maritime/runtime.js';
-import { prune } from './prune/gateway.js';
+import { prune, type PruneEvaluation } from './prune/gateway.js';
 import { GEMINI_CONFIGURED, EXTERNAL_PRUNE_CONFIGURED } from './config.js';
 
 export const api = Router();
@@ -259,6 +259,235 @@ api.post('/demo/:scenario(threat|unreliable)', async (req, res) => {
       corroborations,
       quorumRequired: maritime.meshSnapshot().quorumRequirement,
     },
+  });
+});
+
+/* ===========================================================================
+ * CONSENSUS ENGINE — staged, inspectable mesh verification (the USP demo)
+ * Each stage is a separate call so the frontend can animate the loop live:
+ *   init (sign evidence) → broadcast (mesh relay) → verify (real Prune calls
+ *   per peer) → consensus (quorum + trust recalibration)
+ * ======================================================================== */
+interface ConsensusSession {
+  id: string;
+  scenario: 'threat' | 'unreliable' | 'custom';
+  title: string;
+  origin: string;
+  peers: string[];
+  eventId: string;
+  payload: string;
+  digest: string;
+  signature: string;
+  broadcastAt: string | null;
+  verdicts: Record<string, PruneEvaluation>;
+  createdAt: string;
+}
+
+const consensusSessions = new Map<string, ConsensusSession>();
+let sessionCounter = 0;
+let consensusEventCounter = 9200;
+
+const CONSENSUS_SCENARIOS = {
+  threat: {
+    title: 'Coordinated lateral credential probe',
+    origin: 'A',
+    peers: ['B', 'C', 'D'],
+    callType: 'threat_verification',
+    severity: 'Critical',
+    baseConfidence: 58.2,
+    payload: (origin: string) =>
+      `EVT-${++consensusEventCounter} · SOURCE Agent ${origin}\n` +
+      `Lateral credential probe detected: 41 sequential Kerberos pre-auth failures ` +
+      `from workstation 10.4.7.22 toward db-core-02.admin role within 90s.\n` +
+      `Evidence: packet hash match 9f3a…c21d verified against flow record; process lineage ` +
+      `captured (mimikatz.exe → lsass.exe). Source session token 3b8f2 correlates in two flows.`,
+  },
+  unreliable: {
+    title: 'Unsupported egress spike claim',
+    origin: 'D',
+    peers: ['A', 'B', 'C'],
+    callType: 'anomaly_triage',
+    severity: 'Medium',
+    baseConfidence: 41.0,
+    payload: (origin: string) =>
+      `EVT-${++consensusEventCounter} · SOURCE Agent ${origin}\n` +
+      `Agent claims unauthorized archive exfiltration of 2.1GB. Heuristic-only alert; ` +
+      `no matching flow record, missing packet signature, no destination catalogued. ` +
+      `Payload digest unsupported — single-node claim awaiting corroboration.`,
+  },
+} as const;
+
+api.post('/consensus/init', (req, res) => {
+  const { scenario, customPayload } = req.body ?? {};
+  const isCustom = scenario === 'custom' && typeof customPayload === 'string' && customPayload.trim().length > 0;
+  const spec = isCustom
+    ? null
+    : CONSENSUS_SCENARIOS[(scenario ?? 'threat') as keyof typeof CONSENSUS_SCENARIOS] ?? CONSENSUS_SCENARIOS.threat;
+
+  const origin = isCustom ? 'A' : spec!.origin;
+  const peers = isCustom ? ['B', 'C', 'D'] : [...spec!.peers];
+  const payload = isCustom ? String(customPayload) : spec!.payload(origin);
+  const title = isCustom ? 'Custom telemetry submission' : spec!.title;
+
+  const digest = createHash('sha256').update(payload).digest('hex');
+  const signature = maritime.signFor(origin, `${title}:${digest}`) ?? '';
+  const session: ConsensusSession = {
+    id: `SES-${String(++sessionCounter).padStart(3, '0')}`,
+    scenario: isCustom ? 'custom' : (scenario === 'unreliable' ? 'unreliable' : 'threat'),
+    title,
+    origin,
+    peers,
+    eventId: `EVT-${consensusEventCounter}`,
+    payload,
+    digest,
+    signature,
+    broadcastAt: null,
+    verdicts: {},
+    createdAt: new Date().toISOString(),
+  };
+  consensusSessions.set(session.id, session);
+  res.status(201).json({
+    sessionId: session.id,
+    eventId: session.eventId,
+    title,
+    scenario: session.scenario,
+    origin,
+    peers,
+    severity: isCustom ? 'High' : spec!.severity,
+    baseConfidence: isCustom ? 60 : spec!.baseConfidence,
+    digest,
+    signature,
+    signatureAlgorithm: 'ed25519',
+    createdAt: session.createdAt,
+  });
+});
+
+api.post('/consensus/:id/broadcast', (req, res) => {
+  const session = consensusSessions.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'unknown_session' });
+    return;
+  }
+  session.broadcastAt = new Date().toISOString();
+  res.json({
+    sessionId: session.id,
+    eventId: session.eventId,
+    relay: 'Maritime Mesh Relay',
+    peers: session.peers.map((peer) => ({
+      agentId: peer,
+      host: maritime.get(peer)?.host ?? 'unknown',
+      relayLatencyMs: 14 + Math.floor(Math.random() * 36),
+    })),
+    digestEchoed: session.digest.slice(0, 16) + '…',
+    signatureVerifiedOnRelay: true,
+  });
+});
+
+api.post('/consensus/:id/verify', async (req, res) => {
+  const session = consensusSessions.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'unknown_session' });
+    return;
+  }
+  const evaluations: PruneEvaluation[] = [];
+  for (const peer of session.peers) {
+    const evaluation = await prune.evaluate({
+      agentId: peer,
+      callType: session.scenario === 'unreliable' ? 'anomaly_triage' : 'threat_verification',
+      payload: `${session.eventId} · independent peer review by Agent ${peer}\n${session.payload}`,
+    });
+    evaluations.push(evaluation);
+  }
+  session.verdicts = Object.fromEntries(evaluations.map((e) => [e.agentId, e]));
+  res.json({
+    sessionId: session.id,
+    evaluations: evaluations.map((e) => ({
+      agentId: e.agentId,
+      decision: e.decision,
+      mode: e.mode,
+      corroborated: e.verdict?.corroborated ?? null,
+      confidence: e.verdict?.confidence ?? null,
+      rationale: e.verdict?.rationale ?? null,
+      redactions: e.redactionsApplied,
+      tokensIn: e.tokensIn,
+      tokensOut: e.tokensOut,
+      costUsd: e.estimatedCostUsd,
+      latencyMs: e.latencyMs,
+      trace: e.trace,
+    })),
+  });
+});
+
+api.post('/consensus/:id/consensus', (req, res) => {
+  const session = consensusSessions.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'unknown_session' });
+    return;
+  }
+  if (Object.keys(session.verdicts).length === 0) {
+    res.status(409).json({ error: 'verification_not_run' });
+    return;
+  }
+  const corroborations = session.peers.filter(
+    (p) => session.verdicts[p]?.verdict?.corroborated === true
+  ).length;
+  const quorumRequired = maritime.meshSnapshot().quorumRequirement;
+  const verified = corroborations >= quorumRequired;
+  const base =
+    session.scenario === 'unreliable' ? 41.0 : session.scenario === 'custom' ? 60 : 58.2;
+  const confidence = verified
+    ? Math.min(97.4, base + corroborations * 12.9)
+    : Math.max(18.4, base - (session.peers.length - corroborations) * 7.5);
+
+  // Trust recalibration — verified reports compound trust, flagged ones decay it.
+  const trustDeltas = session.peers.map((peer) => {
+    const agent = maritime.get(peer);
+    if (!agent) return { agentId: peer, delta: 0 };
+    const delta = verified ? 0.3 : -1.1;
+    agent.trustScore = Number(
+      Math.min(99.9, Math.max(60, agent.trustScore + delta)).toFixed(2)
+    );
+    return { agentId: peer, delta, newTrust: agent.trustScore };
+  });
+  const originDelta = verified ? 0.4 : -2.4;
+  const originAgent = maritime.get(session.origin);
+  if (originAgent) {
+    originAgent.trustScore = Number(
+      Math.min(99.9, Math.max(60, originAgent.trustScore + originDelta)).toFixed(2)
+    );
+  }
+
+  res.json({
+    sessionId: session.id,
+    eventId: session.eventId,
+    quorum: { corroborations, required: quorumRequired, met: verified },
+    confidence: Number(confidence.toFixed(1)),
+    verificationStatus: verified ? 'Verified' : 'Flagged Unreliable',
+    recommendation: verified
+      ? 'Revoke compromised session credential, quarantine source workstation port, and lock escalated replica role.'
+      : 'Do not escalate. Suppress unsupported claim, quarantine event, and reduce source node trust weight.',
+    trustDeltas: [...trustDeltas, { agentId: session.origin, delta: originDelta, newTrust: originAgent?.trustScore }],
+    gatewayStats: prune.stats(),
+  });
+});
+
+api.get('/consensus/:id', (req, res) => {
+  const session = consensusSessions.get(req.params.id);
+  if (!session) {
+    res.status(404).json({ error: 'unknown_session' });
+    return;
+  }
+  res.json({
+    sessionId: session.id,
+    title: session.title,
+    scenario: session.scenario,
+    eventId: session.eventId,
+    origin: session.origin,
+    peers: session.peers,
+    digest: session.digest,
+    signature: session.signature,
+    broadcastAt: session.broadcastAt,
+    verifiedPeers: Object.keys(session.verdicts),
   });
 });
 
