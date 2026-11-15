@@ -87,7 +87,28 @@ Open **http://localhost:3000**, then follow this script (~3 minutes):
    flagged at **18.4% confidence**. *"This is the anti-false-positive story: alert
    fatigue is engineered away."*
 
-### Act 3 — The live proof (AI Usage tab, 90s) ← *the money shot*
+### Act 3 — ⭐ THE CONSENSUS ENGINE (the USP, 90s) ← *lead with this*
+7. Open the **Consensus Engine** tab (also linked from the Overview banner).
+8. Pick **Coordinated intrusion** → press **Run Live Consensus**. The stage
+   tracker animates through all four phases, each backed by a real backend call:
+   - **Detect & Sign** — the evidence digest (real SHA-256) and the origin
+     agent's real **ed25519 signature** appear.
+   - **Mesh Broadcast** — packets animate from the origin across the Maritime
+     mesh to peers B, C, D with per-peer relay latency.
+   - **Peer Verification** — three verdict cards stream in, one per peer —
+     each a **real Prune-governed model call** (mode, redactions, tokens,
+     cost, latency shown per card).
+   - **Quorum Consensus** — the quorum slots fill with a spring animation,
+     the confidence counter eases up to ~96.9%, the policy directive lands,
+     and trust-weight recalibration chips show every agent's delta.
+9. Run **Unreliable report** — quorum slots stay empty, confidence eases down
+   to ~18.5%, alert suppressed, Agent D's trust weight decays. *"Same engine,
+   opposite verdict — that's the point."*
+10. Bonus for judges: pick **Custom telemetry** and paste your own log line —
+    include "packet hash match" to get verified, or "no matching flow record"
+    to watch it get rejected. This proves it's not canned.
+
+### Act 4 — The live proof (AI Usage tab, 90s)
 7. Go to **AI Usage** tab. Header shows **LIVE — real gateway telemetry**; stat
    cards show actual requests, redactions, and spend from the backend.
 8. In the **Prune Gateway Console**, fire the presets in order:
@@ -105,7 +126,7 @@ Open **http://localhost:3000**, then follow this script (~3 minutes):
    and flips to `active`. Show the identity fingerprint. *"Agents prove identity
    with real cryptography, not passwords."*
 
-### Act 4 — Full end-to-end (optional, for judges who want more)
+### Act 5 — Full end-to-end (optional, for judges who want more)
 Run the whole mesh loop from the API — real Prune evaluations for every peer:
 
 ```bash
@@ -125,6 +146,7 @@ curl http://localhost:8787/api/prune/stats              # → live gateway telem
 ### Core features
 | Feature | Where |
 |---|---|
+| **⭐ Consensus Engine — live quorum verification (USP)** | Dashboard → Consensus Engine tab |
 | Multi-agent threat verification with quorum consensus | Dashboard Overview + `/api/demo/*` |
 | Trust scoring: reliability, accuracy, evidence completeness, corroboration, consistency | Trust & Verification tab |
 | 3D network graph + hero sphere (Three.js) | Landing / Agent Network tab |
@@ -137,6 +159,8 @@ curl http://localhost:8787/api/prune/stats              # → live gateway telem
 1. **Consensus before escalation.** No single agent can raise an alert alone;
    a claim needs independent cryptographic corroboration from peers on separate
    infrastructure. False positives *and* malicious reports die at quorum.
+   **The Consensus Engine tab makes this USP watchable live** — real signing,
+   real gateway calls, real quorum, real trust math, on stage.
 2. **Every AI call is governed, not just logged.** PRUNE is an *inline
    enforcement point* — injection is blocked pre-model, PII is stripped
    pre-transit, spend is capped pre-spend. The model never sees raw data.
@@ -224,6 +248,11 @@ dashboard's AI Usage tab renders live (5s polling).
 | GET | `/api/prune/stats` | Gateway telemetry aggregates |
 | GET | `/api/prune/logs` | Per-call audit log |
 | POST | `/api/prune/evaluate` | Run a payload through the full pipeline |
+| GET | `/api/consensus/:id` | Session state |
+| POST | `/api/consensus/init` | Start a verification session → digest + ed25519 signature |
+| POST | `/api/consensus/:id/broadcast` | Mesh relay to peers (per-peer latency) |
+| POST | `/api/consensus/:id/verify` | Every peer evaluates through the Prune gateway |
+| POST | `/api/consensus/:id/consensus` | Quorum verdict + trust-weight recalibration |
 | POST | `/api/demo/threat` \| `/api/demo/unreliable` | End-to-end mesh verification scenarios |
 
 ---
