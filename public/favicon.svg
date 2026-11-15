@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Aegis · SentinelMesh brand mark -->
+  <rect width="64" height="64" rx="14" fill="#050A07"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="#B8FF2E" stroke-opacity="0.25" stroke-width="1.5"/>
+  <!-- Shield -->
+  <path d="M32 9 L51 16.5 V32 C51 45.5 41.5 53.5 32 57.5 C22.5 53.5 13 45.5 13 32 V16.5 Z"
+        fill="none" stroke="#B8FF2E" stroke-width="4" stroke-linejoin="round"/>
+  <!-- Quorum motif: 3 independently verifying peers -->
+  <g stroke="#B8FF2E" stroke-width="2.2">
+    <line x1="32" y1="23" x2="25" y2="40"/>
+    <line x1="32" y1="23" x2="39" y2="40"/>
+    <line x1="25" y1="40" x2="39" y2="40"/>
+  </g>
+  <circle cx="32" cy="23" r="3.4" fill="#B8FF2E"/>
+  <circle cx="25" cy="40" r="3.4" fill="#B8FF2E"/>
+  <circle cx="39" cy="40" r="3.4" fill="#B8FF2E"/>
+  <circle cx="32" cy="40" r="2" fill="#050A07"/>
+</svg>
